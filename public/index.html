@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PCPUMA AI Studio - Agentes & API</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind Config -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+              950: '#1e1b4b',
+            },
+            puma: {
+              orange: '#f97316',
+              gold: '#eab308',
+              dark: '#0f172a',
+              card: '#1e293b'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Markdown parser -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- Prism.js for syntax highlighting -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-powershell.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- TOP HEADER -->
+  <header class="h-16 border-b border-slate-800 bg-slate-900/80 backdrop-blur px-4 flex items-center justify-between sticky top-0 z-30">
+    <div class="flex items-center gap-3">
+      <button id="toggleSidebarBtn" class="lg:hidden p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
+        <i data-lucide="menu" class="w-5 h-5"></i>
+      </button>
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 via-orange-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-orange-500/20 ring-1 ring-white/20">
+          <i data-lucide="sparkles" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-lg tracking-tight bg-gradient-to-r from-amber-200 via-orange-300 to-indigo-300 bg-clip-text text-transparent">PCPUMA AI</h1>
+            <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">MVP Studio</span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">Alibaba DashScope / OpenAI-Compatible Engine</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center Status Indicator -->
+    <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs">
+      <span class="relative flex h-2.5 w-2.5">
+        <span id="pingPulse" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+        <span id="pingDot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+      </span>
+      <span id="connectionStatusText" class="text-slate-300 font-medium">Verificando API...</span>
+      <span id="connectionLatency" class="text-slate-500 font-mono text-[11px]">--</span>
+    </div>
+
+    <!-- Right Actions -->
+    <div class="flex items-center gap-2.5">
+      <!-- Model Selector -->
+      <div class="flex items-center gap-1.5 bg-slate-800/90 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs">
+        <i data-lucide="cpu" class="w-4 h-4 text-indigo-400"></i>
+        <select id="globalModelSelector" class="bg-transparent text-slate-200 focus:outline-none font-medium cursor-pointer">
+          <option value="qwen-plus" selected class="bg-slate-900 text-slate-200">Qwen Plus (Versátil)</option>
+          <option value="qwen-max" class="bg-slate-900 text-slate-200">Qwen Max (Avanzado)</option>
+          <option value="qwen-turbo" class="bg-slate-900 text-slate-200">Qwen Turbo (Rápido)</option>
+        </select>
+      </div>
+
+      <!-- Consumir API Button (Featured requirement) -->
+      <button id="openApiModalBtn" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/30 transition-all transform active:scale-95 border border-indigo-400/30">
+        <i data-lucide="code-xml" class="w-4 h-4"></i>
+        <span>Consumir API</span>
+      </button>
+
+      <!-- New Chat Button -->
+      <button id="newChatHeaderBtn" title="Nueva Conversación" class="p-2 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="w-72 border-r border-slate-800 bg-slate-900/60 flex flex-col transition-all duration-300 fixed inset-y-0 left-0 top-16 z-20 lg:static lg:translate-x-0 -translate-x-full">
+      
+      <!-- Top Action in Sidebar -->
+      <div class="p-3 border-b border-slate-800/80 flex gap-2">
+        <button id="newChatBtn" class="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition-all shadow-sm">
+          <i data-lucide="message-square-plus" class="w-4 h-4 text-amber-400"></i>
+          <span>Nueva Conversación</span>
+        </button>
+        <button id="createAgentModalBtn" title="Crear Nuevo Agente" class="p-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 hover:text-white transition-all">
+          <i data-lucide="bot" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Agents Section -->
+      <div class="px-3 pt-3 pb-1">
+        <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+          <span>Agentes Especializados</span>
+          <button id="refreshAgentsBtn" title="Recargar Agentes" class="hover:text-slate-200">
+            <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+        <div id="agentsList" class="space-y-1.5 max-h-56 overflow-y-auto pr-1 custom-scroll">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <div class="my-2 border-t border-slate-800"></div>
+
+      <!-- Chats History -->
+      <div class="flex-1 flex flex-col px-3 pb-3 overflow-hidden">
+        <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+          <span>Historial de Chats</span>
+          <button id="clearAllChatsBtn" title="Limpiar todos" class="text-[10px] text-slate-500 hover:text-red-400">Limpiar</button>
+        </div>
+        <div id="chatsHistoryList" class="flex-1 overflow-y-auto space-y-1 pr-1 custom-scroll">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="p-3 border-t border-slate-800 bg-slate-900/90 text-xs text-slate-400 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+          <span class="truncate">PCPUMA Local Engine</span>
+        </div>
+        <button id="sidebarApiQuickBtn" class="text-indigo-400 hover:text-indigo-300 font-mono text-[11px]">API Docs</button>
+      </div>
+    </aside>
+
+    <!-- CHAT MAIN VIEWPORT -->
+    <main class="flex-1 flex flex-col bg-slate-950 relative overflow-hidden">
+      
+      <!-- Active Agent Banner -->
+      <div id="agentBanner" class="border-b border-slate-800/80 bg-slate-900/40 px-4 py-2.5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div id="agentBannerIcon" class="w-9 h-9 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+            <i data-lucide="code-2" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 id="agentBannerName" class="font-semibold text-sm text-slate-100">PCPUMA Code Architect</h2>
+              <span id="agentBannerCategory" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">CODE</span>
+            </div>
+            <p id="agentBannerTagline" class="text-xs text-slate-400">Ingeniería de Software, Scripts, APIs y Debugging</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 text-xs">
+          <!-- Temperature Slider quick indicator -->
+          <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-slate-800/60 rounded border border-slate-700/60 text-slate-400">
+            <span>Temp:</span>
+            <span id="tempValueDisplay" class="font-mono text-slate-200">0.2</span>
+          </div>
+          <button id="exportChatBtn" title="Exportar Documento" class="p-1.5 text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700">
+            <i data-lucide="download" class="w-4 h-4"></i>
+          </button>
+          <button id="clearChatBtn" title="Limpiar pantalla" class="p-1.5 text-slate-400 hover:text-red-400 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages Stream Area -->
+      <div id="chatMessages" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 custom-scroll">
+        <!-- Welcome card and Quick Prompts shown on empty chat -->
+        <div id="welcomeCard" class="max-w-3xl mx-auto my-6 p-6 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-900/60 border border-slate-800 shadow-xl">
+          <div class="flex items-start gap-4 mb-4">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-orange-500/20 flex-shrink-0">
+              <i data-lucide="sparkles" class="w-7 h-7 text-white"></i>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                Bienvenido a PCPUMA AI Studio
+              </h3>
+              <p class="text-sm text-slate-400 mt-1">
+                Plataforma corporativa potenciada por el motor Alibaba DashScope (Qwen-Max y Qwen-Plus). Especializada en ingeniería de software, arquitectura de sistemas y generación de documentos administrativos formales (Anexos Técnicos, Instructivos de Cotización, TDRs).
+              </p>
+            </div>
+          </div>
+
+          <div class="my-4 border-t border-slate-800"></div>
+
+          <div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-3">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+              Acciones y Prompts Rápidos de este Agente
+            </span>
+            <div id="quickPromptsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <!-- Rendered dynamically depending on selected agent -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Input Floating Bar -->
+      <div class="p-4 border-t border-slate-800/80 bg-slate-900/60 backdrop-blur">
+        <div class="max-w-4xl mx-auto">
+          <form id="chatForm" class="relative flex flex-col bg-slate-900 border border-slate-700/80 focus-within:border-indigo-500 rounded-xl shadow-lg transition-all">
+            <textarea
+              id="messageInput"
+              rows="2"
+              placeholder="Escribe tu requerimiento... (Ej: Genera un anexo técnico detallado para licitación de servidores, o escribe una API en Node.js)"
+              class="w-full bg-transparent text-slate-100 px-4 pt-3 pb-2 text-sm focus:outline-none resize-none placeholder-slate-500 custom-scroll"
+            ></textarea>
+            
+            <div class="flex items-center justify-between px-3 py-2 border-t border-slate-800/60 bg-slate-900/40 rounded-b-xl">
+              <div class="flex items-center gap-2 text-xs text-slate-400">
+                <span class="hidden sm:inline">Presiona <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] text-slate-300">Enter</kbd> para enviar</span>
+                <span class="hidden sm:inline">•</span>
+                <span class="hidden sm:inline"><kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] text-slate-300">Shift + Enter</kbd> salto de línea</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  type="submit"
+                  id="sendBtn"
+                  class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/30 transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span>Enviar</span>
+                  <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL: CONSUMIR API EN OTROS PROYECTOS -->
+  <div id="apiModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+            <i data-lucide="terminal" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              Credenciales & Consumo de API PCPUMA
+              <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono">Compatible OpenAI v1</span>
+            </h3>
+            <p class="text-xs text-slate-400">Datos y fragmentos de código listos para integrar en tus proyectos externos</p>
+          </div>
+        </div>
+        <button id="closeApiModalBtn" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="flex-1 overflow-y-auto p-6 space-y-6 custom-scroll">
+        <!-- Credentials Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <!-- API Key Card -->
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-semibold text-slate-400">Token / API Key</span>
+              <button class="copy-field-btn text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1" data-target="apiKeyVal">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copiar
+              </button>
+            </div>
+            <div id="apiKeyVal" class="font-mono text-xs text-amber-300 bg-slate-900/80 p-2 rounded border border-slate-800/80 break-all select-all">
+              sk-ws-H.DHDDXDX.XjLB.MEYCIQCfJDa_sSGqBbCMjOKYNG85kjB6m4yLEODkwREfVOsEhgIhAOd2v_5KqmP8cTgLlBK7ea0CaNkK0DxvLyPF3Z7AI0e1
+            </div>
+          </div>
+
+          <!-- OpenAI Compatible Endpoint Card -->
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-semibold text-slate-400">Base URL (OpenAI SDKs)</span>
+              <button class="copy-field-btn text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1" data-target="endpointVal">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copiar
+              </button>
+            </div>
+            <div id="endpointVal" class="font-mono text-xs text-indigo-300 bg-slate-900/80 p-2 rounded border border-slate-800/80 break-all select-all">
+              https://ws-tq7m5b6imoeyftjn.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1
+            </div>
+          </div>
+
+          <!-- Host Card -->
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-semibold text-slate-400">API Host</span>
+              <button class="copy-field-btn text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1" data-target="hostVal">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copiar
+              </button>
+            </div>
+            <div id="hostVal" class="font-mono text-xs text-slate-300 bg-slate-900/80 p-2 rounded border border-slate-800/80 break-all select-all">
+              ws-tq7m5b6imoeyftjn.ap-southeast-1.maas.aliyuncs.com
+            </div>
+          </div>
+
+          <!-- DashScope Native Card -->
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-semibold text-slate-400">DashScope Native Endpoint</span>
+              <button class="copy-field-btn text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1" data-target="dashscopeVal">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copiar
+              </button>
+            </div>
+            <div id="dashscopeVal" class="font-mono text-xs text-slate-300 bg-slate-900/80 p-2 rounded border border-slate-800/80 break-all select-all">
+              https://ws-tq7m5b6imoeyftjn.ap-southeast-1.maas.aliyuncs.com/api/v1
+            </div>
+          </div>
+        </div>
+
+        <!-- Code Snippets Section -->
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+              <i data-lucide="code" class="w-4 h-4 text-amber-400"></i>
+              Ejemplos de Integración en 1-Clic
+            </h4>
+            <span class="text-xs text-slate-400">Elige tu lenguaje o herramienta</span>
+          </div>
+
+          <!-- Tabs -->
+          <div class="flex gap-1.5 border-b border-slate-800 pb-2 overflow-x-auto text-xs">
+            <button class="snippet-tab-btn active px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-medium" data-tab="curl">cURL</button>
+            <button class="snippet-tab-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-medium" data-tab="python_openai">Python (OpenAI SDK)</button>
+            <button class="snippet-tab-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-medium" data-tab="python_requests">Python (Requests)</button>
+            <button class="snippet-tab-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-medium" data-tab="nodejs_openai">Node.js (OpenAI)</button>
+            <button class="snippet-tab-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-medium" data-tab="nodejs_fetch">JavaScript (Fetch)</button>
+            <button class="snippet-tab-btn px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-medium" data-tab="powershell">PowerShell</button>
+          </div>
+
+          <!-- Tab Contents -->
+          <div class="relative mt-3">
+            <button id="copyActiveSnippetBtn" class="absolute top-3 right-3 px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs flex items-center gap-1.5 border border-slate-700 z-10">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              <span id="copySnippetLabel">Copiar Código</span>
+            </button>
+            <pre class="rounded-xl border border-slate-800 !bg-slate-950 p-4 overflow-x-auto text-xs max-h-80"><code id="snippetCodeBlock" class="language-bash"></code></pre>
+          </div>
+        </div>
+
+        <!-- Models Available Summary -->
+        <div class="p-4 rounded-xl bg-slate-950 border border-slate-800">
+          <h5 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Modelos Recomendados para la API:</h5>
+          <ul class="text-xs text-slate-300 space-y-1.5">
+            <li><code class="text-indigo-300 bg-slate-900 px-1 py-0.5 rounded">qwen-max</code>: Máximo razonamiento, lógica compleja, desarrollo de software avanzado y TDRs críticos.</li>
+            <li><code class="text-emerald-300 bg-slate-900 px-1 py-0.5 rounded">qwen-plus</code>: Balance ideal velocidad/calidad para Anexos Técnicos, cotizaciones, minutas y soporte general.</li>
+            <li><code class="text-amber-300 bg-slate-900 px-1 py-0.5 rounded">qwen-turbo</code>: Baja latencia y alta velocidad para resúmenes o extracción puntual de datos.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-3 border-t border-slate-800 bg-slate-900/90 flex justify-end">
+        <button id="closeApiModalBtn2" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CREAR NUEVO AGENTE PERSONALIZADO -->
+  <div id="createAgentModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+            <i data-lucide="bot" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Crear Nuevo Agente PCPUMA</h3>
+            <p class="text-xs text-slate-400">Configura un agente con su propio rol, instrucciones de sistema y parámetros</p>
+          </div>
+        </div>
+        <button id="closeAgentModalBtn" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="createAgentForm" class="flex-1 overflow-y-auto p-6 space-y-4 custom-scroll">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Nombre del Agente *</label>
+          <input type="text" id="newAgentName" required placeholder="Ej: PCPUMA Revisor de Contratos" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Especialidad / Subtítulo</label>
+            <input type="text" id="newAgentTagline" placeholder="Ej: Auditoría de cláusulas y riesgos" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Categoría</label>
+            <select id="newAgentCategory" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500">
+              <option value="code">Código & Desarrollo</option>
+              <option value="compras">Cotizaciones & Anexos</option>
+              <option value="admin">Administrativo & Legal</option>
+              <option value="general">Asistencia General</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Modelo LLM</label>
+            <select id="newAgentModel" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500">
+              <option value="qwen-plus">Qwen Plus (Recomendado)</option>
+              <option value="qwen-max">Qwen Max (Complejo / Lógica)</option>
+              <option value="qwen-turbo">Qwen Turbo (Rápido)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Temperatura (Creatividad vs Precisión)</label>
+            <input type="range" id="newAgentTemp" min="0" max="1" step="0.1" value="0.3" class="w-full accent-indigo-500" />
+            <div class="flex justify-between text-[10px] text-slate-500">
+              <span>0.0 (Preciso / Código)</span>
+              <span id="tempSliderVal">0.3</span>
+              <span>1.0 (Creativo)</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Instrucciones del Sistema (System Prompt) *</label>
+          <textarea id="newAgentSystemPrompt" required rows="5" placeholder="Define el rol exacto, tono, formato de salida y reglas de respuesta para este agente..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 resize-none custom-scroll"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Prompts Rápidos Sugeridos (uno por línea)</label>
+          <textarea id="newAgentQuickPrompts" rows="2" placeholder="Ej: Auditar cláusulas de confidencialidad&#10;Identificar riesgos de penalización" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 resize-none custom-scroll"></textarea>
+        </div>
+
+        <div class="pt-4 border-t border-slate-800 flex justify-end gap-2">
+          <button type="button" id="cancelAgentModalBtn" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold">Cancelar</button>
+          <button type="submit" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/30">Guardar Agente</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-xs">
+      <i id="toastIcon" data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+      <span id="toastMessage">Acción completada</span>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "pcpuma-ai-studio",
+  "version": "1.0.0",
+  "description": "Plataforma de Chat, Agentes Inteligentes y Consumo de API PCPUMA",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}
