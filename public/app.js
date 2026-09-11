@@ -13,6 +13,16 @@ document.addEventListener('DOMContentLoaded', () => {
   let credentialsData = null;
   let activeSnippetTab = 'curl';
   let isGenerating = false;
+  const isGitHubPages = window.location.hostname.endsWith('github.io');
+  let backendUrl = localStorage.getItem('pcpuma_backend_url') || '';
+
+  function getApiUrl(path) {
+    if (!path.startsWith('/')) path = '/' + path;
+    if (backendUrl) {
+      return backendUrl.replace(/\/+$/, '') + path;
+    }
+    return path;
+  }
 
   // DOM Elements
   const connectionStatusText = document.getElementById('connectionStatusText');
@@ -233,7 +243,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function checkApiStatus() {
     try {
-      const res = await fetch('/api/status');
+      const res = await fetch(getApiUrl('/api/status'));
+      if (!res.ok) throw new Error('Status ' + res.status);
       const data = await res.json();
       if (data.status === 'online') {
         connectionStatusText.innerText = 'PCPUMA API En Línea';
@@ -241,32 +252,79 @@ document.addEventListener('DOMContentLoaded', () => {
         connectionLatency.innerText = data.latency;
         pingPulse.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
         pingDot.className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500';
-      } else {
-        throw new Error(data.message || 'Status not 200');
+        return;
       }
     } catch (err) {
-      connectionStatusText.innerText = 'API Offline o Error';
-      connectionStatusText.className = 'text-red-400 font-semibold';
-      connectionLatency.innerText = 'Error';
-      pingPulse.className = 'hidden';
-      pingDot.className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500';
+      if (isGitHubPages && !backendUrl) {
+        connectionStatusText.innerText = 'GitHub Pages (Conectar Backend)';
+        connectionStatusText.className = 'text-amber-400 font-semibold cursor-pointer underline';
+        connectionLatency.innerText = '⚙️ Configurar';
+        pingPulse.className = 'hidden';
+        pingDot.className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500';
+      } else {
+        connectionStatusText.innerText = 'API Offline o Error';
+        connectionStatusText.className = 'text-red-400 font-semibold';
+        connectionLatency.innerText = 'Error';
+        pingPulse.className = 'hidden';
+        pingDot.className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500';
+      }
     }
+  }
+
+  // Click on status to configure backend url
+  if (connectionStatusText) {
+    connectionStatusText.style.cursor = 'pointer';
+    connectionStatusText.addEventListener('click', () => {
+      const current = localStorage.getItem('pcpuma_backend_url') || '';
+      const input = prompt('Ingresa la URL de tu backend en Render (ejemplo: https://pcpuma-ai.onrender.com) o deja vacío para local:', current);
+      if (input !== null) {
+        backendUrl = input.trim().replace(/\/+$/, '');
+        localStorage.setItem('pcpuma_backend_url', backendUrl);
+        showToast(backendUrl ? 'Backend configurado: ' + backendUrl : 'Usando backend local');
+        checkApiStatus();
+        loadAgents();
+      }
+    });
   }
 
   async function loadCredentials() {
     try {
-      const res = await fetch('/api/credentials');
-      credentialsData = await res.json();
-      if (credentialsData.credentials) {
-        document.getElementById('apiKeyVal').innerText = credentialsData.credentials.apiKey;
-        document.getElementById('endpointVal').innerText = credentialsData.credentials.compatibleEndpoint;
-        document.getElementById('hostVal').innerText = credentialsData.credentials.apiHost;
-        document.getElementById('dashscopeVal').innerText = credentialsData.credentials.dashScopeEndpoint;
+      const res = await fetch(getApiUrl('/api/credentials'));
+      if (res.ok) {
+        credentialsData = await res.json();
+      } else {
+        throw new Error('Not ok');
       }
-      updateSnippetDisplay();
     } catch (e) {
-      console.error('Error loading credentials:', e);
+      // Fallback estático para que el botón "Consumir API" funcione siempre en GitHub Pages
+      const apiKey = 'sk-ws-H.DHDDXDX.XjLB.MEYCIQCfJDa_sSGqBbCMjOKYNG85kjB6m4yLEODkwREfVOsEhgIhAOd2v_5KqmP8cTgLlBK7ea0CaNkK0DxvLyPF3Z7AI0e1';
+      const apiHost = 'ws-tq7m5b6imoeyftjn.ap-southeast-1.maas.aliyuncs.com';
+      const compEndpoint = 'https://ws-tq7m5b6imoeyftjn.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1';
+      const dashEndpoint = 'https://ws-tq7m5b6imoeyftjn.ap-southeast-1.maas.aliyuncs.com/api/v1';
+      credentialsData = {
+        credentials: {
+          apiKey: apiKey,
+          apiHost: apiHost,
+          compatibleEndpoint: compEndpoint,
+          dashScopeEndpoint: dashEndpoint
+        },
+        snippets: {
+          curl: `curl --location '${compEndpoint}/chat/completions' \\\n--header 'Content-Type: application/json' \\\n--header 'Authorization: Bearer ${apiKey}' \\\n--data '{\n  \"model\": \"qwen-plus\",\n  \"messages\": [{\"role\": \"user\", \"content\": \"Hola PCPUMA\"}]\n}'`,
+          python_openai: `from openai import OpenAI\n\nclient = OpenAI(\n    api_key="${apiKey}",\n    base_url="${compEndpoint}"\n)\n\nresponse = client.chat.completions.create(\n    model="qwen-plus",\n    messages=[{"role": "user", "content": "Hola PCPUMA"}]\n)\nprint(response.choices[0].message.content)`,
+          python_requests: `import requests\n\nurl = "${compEndpoint}/chat/completions"\nheaders = {\n    "Authorization": "Bearer ${apiKey}",\n    "Content-Type": "application/json"\n}\npayload = {\n    "model": "qwen-plus",\n    "messages": [{"role": "user", "content": "Hola PCPUMA"}]\n}\nresponse = requests.post(url, headers=headers, json=payload)\nprint(response.json())`,
+          nodejs_openai: `import OpenAI from 'openai';\n\nconst openai = new OpenAI({\n  apiKey: '${apiKey}',\n  baseURL: '${compEndpoint}'\n});\n\nconst response = await openai.chat.completions.create({\n  model: 'qwen-plus',\n  messages: [{ role: 'user', content: 'Hola' }]\n});\nconsole.log(response.choices[0].message.content);`,
+          nodejs_fetch: `const response = await fetch('${compEndpoint}/chat/completions', {\n  method: 'POST',\n  headers: {\n    'Content-Type': 'application/json',\n    'Authorization': 'Bearer ${apiKey}'\n  },\n  body: JSON.stringify({\n    model: 'qwen-plus',\n    messages: [{ role: 'user', content: 'Hola' }]\n  })\n});\nconst data = await response.json();\nconsole.log(data);`,
+          powershell: `$headers = @{\n    "Authorization" = "Bearer ${apiKey}"\n    "Content-Type"  = "application/json"\n}\n$body = @{\n    model = "qwen-plus"\n    messages = @(@{ role = "user"; content = "Hola" })\n} | ConvertTo-Json\n$res = Invoke-RestMethod -Uri "${compEndpoint}/chat/completions" -Method Post -Headers $headers -Body $body\n$res.choices[0].message.content`
+        }
+      };
     }
+    if (credentialsData && credentialsData.credentials) {
+      document.getElementById('apiKeyVal').innerText = credentialsData.credentials.apiKey;
+      document.getElementById('endpointVal').innerText = credentialsData.credentials.compatibleEndpoint;
+      document.getElementById('hostVal').innerText = credentialsData.credentials.apiHost;
+      document.getElementById('dashscopeVal').innerText = credentialsData.credentials.dashScopeEndpoint;
+    }
+    updateSnippetDisplay();
   }
 
   function updateSnippetDisplay() {
@@ -292,16 +350,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function loadAgents() {
     try {
-      const res = await fetch('/api/agents');
-      agents = await res.json();
-      if (agents.length > 0) {
-        if (!currentAgent) {
-          selectAgent(agents[0]);
-        }
-        renderAgentsList();
+      const res = await fetch(getApiUrl('/api/agents'));
+      if (res.ok) {
+        agents = await res.json();
+      } else {
+        throw new Error('Not ok');
       }
     } catch (e) {
-      console.error('Error loading agents:', e);
+      try {
+        const res2 = await fetch('./data/agents.json');
+        if (res2.ok) {
+          agents = await res2.json();
+        } else {
+          throw new Error('Fallback failed');
+        }
+      } catch (err2) {
+        agents = [];
+      }
+    }
+    const localCustom = JSON.parse(localStorage.getItem('pcpuma_custom_agents') || '[]');
+    agents = [...agents, ...localCustom];
+
+    if (agents.length > 0) {
+      if (!currentAgent) {
+        selectAgent(agents[0]);
+      }
+      renderAgentsList();
     }
   }
 
